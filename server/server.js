@@ -12,11 +12,11 @@ connectDB();
 
 const app = express();
 
-// Middleware
+// --- Standard Middleware ---
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// --- Routes ---
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/books', require('./routes/bookRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));

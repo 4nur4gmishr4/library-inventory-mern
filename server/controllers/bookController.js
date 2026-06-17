@@ -1,8 +1,6 @@
 const Book = require('../models/Book');
 
-// @desc    Get all books
-// @route   GET /api/books
-// @access  Private
+// grab all books, sorted newest first
 const getBooks = async (req, res, next) => {
   try {
     const books = await Book.find().sort({ createdAt: -1 });
@@ -12,9 +10,8 @@ const getBooks = async (req, res, next) => {
   }
 };
 
-// @desc    Create a book
-// @route   POST /api/books
-// @access  Private
+// add a new book to the inventory
+// todo: maybe add a barcode scanner integration later?
 const createBook = async (req, res, next) => {
   try {
     const { title, author, isbn, genre, totalCopies } = req.body;
@@ -77,9 +74,7 @@ const createBook = async (req, res, next) => {
   }
 };
 
-// @desc    Update a book
-// @route   PUT /api/books/:id
-// @access  Private
+// update existing book record by its mongo ID
 const updateBook = async (req, res, next) => {
   try {
     const book = await Book.findById(req.params.id);
@@ -147,9 +142,7 @@ const updateBook = async (req, res, next) => {
   }
 };
 
-// @desc    Delete a book
-// @route   DELETE /api/books/:id
-// @access  Private
+// trash a book from the db
 const deleteBook = async (req, res, next) => {
   try {
     const book = await Book.findById(req.params.id);

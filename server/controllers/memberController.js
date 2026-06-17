@@ -1,8 +1,6 @@
 const Member = require('../models/Member');
 
-// @desc    Get all members
-// @route   GET /api/members
-// @access  Private
+// fetch all active library members, newest first
 const getMembers = async (req, res, next) => {
   try {
     const members = await Member.find().sort({ createdAt: -1 });
@@ -12,9 +10,7 @@ const getMembers = async (req, res, next) => {
   }
 };
 
-// @desc    Create a member
-// @route   POST /api/members
-// @access  Private
+// register a new member and do strict validations on phone/email
 const createMember = async (req, res, next) => {
   try {
     const { fullName, email, phone, membershipType } = req.body;
@@ -46,7 +42,7 @@ const createMember = async (req, res, next) => {
     }
 
     // Validate phone (exactly 10 digits)
-    if (!/^\d{10}$/.test(phone)) {
+    if (!/^\d{10}$/.test(phone.toString())) {
       res.status(400);
       throw new Error('Phone Number must be exactly 10 digits');
     }
@@ -66,9 +62,7 @@ const createMember = async (req, res, next) => {
   }
 };
 
-// @desc    Update a member
-// @route   PUT /api/members/:id
-// @access  Private
+// update an existing member's info
 const updateMember = async (req, res, next) => {
   try {
     const member = await Member.findById(req.params.id);
@@ -105,7 +99,7 @@ const updateMember = async (req, res, next) => {
     }
 
     // Validate phone if provided
-    if (phone !== undefined && !/^\d{10}$/.test(phone)) {
+    if (phone !== undefined && !/^\d{10}$/.test(phone.toString())) {
       res.status(400);
       throw new Error('Phone Number must be exactly 10 digits');
     }
@@ -131,9 +125,8 @@ const updateMember = async (req, res, next) => {
   }
 };
 
-// @desc    Delete a member
-// @route   DELETE /api/members/:id
-// @access  Private
+// completely delete a member record from the db
+// note: might want to check if they have active book loans before doing this in v2
 const deleteMember = async (req, res, next) => {
   try {
     const member = await Member.findById(req.params.id);

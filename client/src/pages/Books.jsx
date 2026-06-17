@@ -1,268 +1,293 @@
-import { useState, useEffect } from 'react';
-import API from '../api/axiosInstance';
-
-const GENRES = ['Fiction', 'Non-Fiction', 'Science', 'History', 'Technology', 'Other'];
-
-const emptyForm = { title: '', author: '', isbn: '', genre: '', totalCopies: '' };
+import { useState, useEffect, useContext } from 'react';
+import { DataContext } from '../context/DataContext';
+import api from '../api/axios';
 
 const Books = () => {
-  const [books, setBooks] = useState([]);
-  const [formData, setFormData] = useState(emptyForm);
-  const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState('');
-  const [formError, setFormError] = useState('');
+  const { books, isBooksLoading, fetchBooks, booksFetched } = useContext(DataContext);
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch all books
-  const fetchBooks = async () => {
-    try {
-      const { data } = await API.get('/books');
-      setBooks(data);
-      setError('');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch books');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [editId, setEditId] = useState(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    author: '',
+    isbn: '',
+    genre: 'Fiction',
+    totalCopies: ''
+  });
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchBooks();
-  }, []);
+    if (!booksFetched) {
+      fetchBooks();
+    } else {
+      fetchBooks(true);
+    }
+  }, [fetchBooks, booksFetched]);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // Client-side validation
+  // Quick regex checks before we bother hitting the API
   const validate = () => {
-    if (!formData.title || !formData.author || !formData.isbn || !formData.genre || !formData.totalCopies) {
-      setFormError('Please fill in all fields');
-      return false;
-    }
-    if (formData.title.length < 2 || formData.title.length > 100) {
-      setFormError('Title must be between 2 and 100 characters');
-      return false;
-    }
-    if (formData.author.length < 2 || formData.author.length > 100) {
-      setFormError('Author must be between 2 and 100 characters');
-      return false;
-    }
-    if (!/^\d{13}$/.test(formData.isbn)) {
-      setFormError('ISBN must be exactly 13 digits');
-      return false;
-    }
-    if (!GENRES.includes(formData.genre)) {
-      setFormError('Please select a valid genre');
-      return false;
-    }
-    const copies = Number(formData.totalCopies);
-    if (!Number.isInteger(copies) || copies < 1) {
-      setFormError('Total Copies must be a whole number of at least 1');
-      return false;
-    }
-    return true;
+    if (!formData.title || formData.title.length < 2 || formData.title.length > 100) return 'Title must be 2-100 characters.';
+    if (!formData.author || formData.author.length < 2 || formData.author.length > 100) return 'Author must be 2-100 characters.';
+    if (!/^\d{13}$/.test(formData.isbn)) return 'ISBN must be exactly 13 digits.';
+    if (!formData.totalCopies || parseInt(formData.totalCopies, 10) < 1) return 'Total copies must be at least 1.';
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError('');
+    setError('');
 
-    if (!validate()) return;
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     try {
-      if (editingId) {
-        await API.put(`/books/${editingId}`, {
-          ...formData,
-          totalCopies: Number(formData.totalCopies),
-        });
+      if (editId) {
+        await api.put(`/books/${editId}`, formData);
       } else {
-        await API.post('/books', {
-          ...formData,
-          totalCopies: Number(formData.totalCopies),
-        });
+        await api.post('/books', formData);
       }
-      setFormData(emptyForm);
-      setEditingId(null);
       setShowForm(false);
-      fetchBooks();
+      setEditId(null);
+      setFormData({ title: '', author: '', isbn: '', genre: 'Fiction', totalCopies: '' });
+      fetchBooks(true);
     } catch (err) {
-      setFormError(err.response?.data?.message || 'Operation failed');
+      setError(err.response?.data?.message || 'Failed to save book.');
     }
   };
 
   const handleEdit = (book) => {
+    setEditId(book._id);
     setFormData({
       title: book.title,
       author: book.author,
       isbn: book.isbn,
       genre: book.genre,
-      totalCopies: String(book.totalCopies),
+      totalCopies: book.totalCopies
     });
-    setEditingId(book._id);
     setShowForm(true);
-    setFormError('');
+    setError('');
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this book?')) return;
-    try {
-      await API.delete(`/books/${id}`);
-      fetchBooks();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete book');
+    if (window.confirm('Are you sure you want to delete this book?')) {
+      try {
+        await api.delete(`/books/${id}`);
+        fetchBooks(true);
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
   const handleCancel = () => {
-    setFormData(emptyForm);
-    setEditingId(null);
     setShowForm(false);
-    setFormError('');
+    setEditId(null);
+    setFormData({ title: '', author: '', isbn: '', genre: 'Fiction', totalCopies: '' });
+    setError('');
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <h1>Books</h1>
-        {!showForm && (
-          <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-            + Add Book
-          </button>
-        )}
+    <main className="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop pt-xl pb-xl">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-lg">
+        <div>
+          <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Book Management</h1>
+          <p className="font-body-md text-body-md text-on-surface-variant">Manage library book records.</p>
+        </div>
+        <button 
+          onClick={() => {
+            setShowForm(true);
+            setEditId(null);
+            setFormData({ title: '', author: '', isbn: '', genre: 'Fiction', totalCopies: '' });
+            setError('');
+          }}
+          className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px] flex items-center mt-sm md:mt-0"
+        >
+          <span className="material-symbols-outlined mr-sm text-[18px]">add</span>
+          Add Book
+        </button>
       </div>
 
-      {error && <div className="error-message">{error}</div>}
-
       {showForm && (
-        <div className="form-card">
-          <h2>{editingId ? 'Edit Book' : 'Add New Book'}</h2>
-          <form onSubmit={handleSubmit}>
-            {formError && <div className="error-message">{formError}</div>}
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="title">Title</label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Book title (2-100 characters)"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="author">Author</label>
-                <input
-                  type="text"
-                  id="author"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleChange}
-                  placeholder="Author name (2-100 characters)"
-                  required
-                />
-              </div>
+        <div className="border border-outline-variant bg-surface-container-lowest p-lg mb-xl">
+          <h2 className="font-label-sm text-label-sm text-on-surface mb-md">
+            {editId ? 'Edit Book Details' : 'New Book Details'}
+          </h2>
+          
+          {error && (
+            <div className="mb-md p-sm border border-error bg-error-container text-on-error-container font-body-md text-body-md flex items-start gap-sm">
+              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+              {error}
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="isbn">ISBN</label>
-                <input
-                  type="text"
-                  id="isbn"
-                  name="isbn"
-                  value={formData.isbn}
-                  onChange={handleChange}
-                  placeholder="13-digit ISBN"
-                  maxLength="13"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="genre">Genre</label>
-                <select
-                  id="genre"
-                  name="genre"
-                  value={formData.genre}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Genre</option>
-                  {GENRES.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-gutter items-end">
+            <div className="flex flex-col">
+              <label className="font-label-sm text-label-sm text-on-surface mb-xs" htmlFor="title">Title</label>
+              <input 
+                className="h-[40px] border border-outline-variant bg-surface-container-lowest px-sm focus:border-primary focus:outline-none font-body-md text-body-md text-on-surface" 
+                id="title" 
+                required 
+                type="text"
+                value={formData.title}
+                onChange={e => setFormData({...formData, title: e.target.value})}
+              />
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="totalCopies">Total Copies</label>
-                <input
-                  type="number"
-                  id="totalCopies"
-                  name="totalCopies"
-                  value={formData.totalCopies}
-                  onChange={handleChange}
-                  placeholder="Minimum 1"
-                  min="1"
-                  required
-                />
-              </div>
-              <div className="form-group form-actions-inline">
-                <button type="submit" className="btn btn-primary">
-                  {editingId ? 'Update Book' : 'Add Book'}
-                </button>
-                <button type="button" className="btn btn-secondary" onClick={handleCancel}>
-                  Cancel
-                </button>
-              </div>
+            
+            <div className="flex flex-col">
+              <label className="font-label-sm text-label-sm text-on-surface mb-xs" htmlFor="author">Author</label>
+              <input 
+                className="h-[40px] border border-outline-variant bg-surface-container-lowest px-sm focus:border-primary focus:outline-none font-body-md text-body-md text-on-surface" 
+                id="author" 
+                required 
+                type="text"
+                value={formData.author}
+                onChange={e => setFormData({...formData, author: e.target.value})}
+              />
+            </div>
+            
+            <div className="flex flex-col">
+              <label className="font-label-sm text-label-sm text-on-surface mb-xs" htmlFor="isbn">ISBN (13 digits)</label>
+              <input 
+                className="h-[40px] border border-outline-variant bg-surface-container-lowest px-sm focus:border-primary focus:outline-none font-body-md text-body-md text-on-surface" 
+                id="isbn" 
+                required 
+                type="text"
+                value={formData.isbn}
+                onChange={e => setFormData({...formData, isbn: e.target.value})}
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="font-label-sm text-label-sm text-on-surface mb-xs" htmlFor="genre">Genre</label>
+              <select 
+                className="h-[40px] border border-outline-variant bg-surface-container-lowest px-sm focus:border-primary focus:outline-none font-body-md text-body-md text-on-surface" 
+                id="genre"
+                value={formData.genre}
+                onChange={e => setFormData({...formData, genre: e.target.value})}
+              >
+                <option value="Fiction">Fiction</option>
+                <option value="Non-Fiction">Non-Fiction</option>
+                <option value="Science">Science</option>
+                <option value="History">History</option>
+                <option value="Technology">Technology</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col">
+              <label className="font-label-sm text-label-sm text-on-surface mb-xs" htmlFor="totalCopies">Total Copies</label>
+              <input 
+                className="h-[40px] border border-outline-variant bg-surface-container-lowest px-sm focus:border-primary focus:outline-none font-body-md text-body-md text-on-surface" 
+                id="totalCopies" 
+                required 
+                type="number"
+                min="1"
+                value={formData.totalCopies}
+                onChange={e => setFormData({...formData, totalCopies: e.target.value})}
+              />
+            </div>
+
+            <div className="col-span-full flex justify-end space-x-md mt-md">
+              <button 
+                type="button"
+                onClick={handleCancel}
+                className="bg-surface-container-lowest text-on-surface border border-outline-variant px-lg py-sm font-label-sm text-label-sm hover:bg-surface-container-low transition-colors h-[40px]"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit"
+                className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px]"
+              >
+                {editId ? 'Update Book' : 'Save Book'}
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      {loading ? (
-        <p className="loading-text">Loading books...</p>
-      ) : books.length === 0 ? (
-        <p className="empty-text">No books found. Add your first book!</p>
-      ) : (
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Author</th>
-                <th>ISBN</th>
-                <th>Genre</th>
-                <th>Total Copies</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {books.map((book) => (
-                <tr key={book._id}>
-                  <td>{book.title}</td>
-                  <td>{book.author}</td>
-                  <td><code>{book.isbn}</code></td>
-                  <td><span className="badge">{book.genre}</span></td>
-                  <td>{book.totalCopies}</td>
-                  <td className="actions-cell">
-                    <button className="btn btn-sm btn-edit" onClick={() => handleEdit(book)}>
-                      Edit
-                    </button>
-                    <button className="btn btn-sm btn-delete" onClick={() => handleDelete(book._id)}>
-                      Delete
-                    </button>
+      <div className="border border-outline-variant bg-surface-container-lowest">
+        <table className="w-full text-left border-collapse">
+          {/* Hide the standard thead on mobile and use CSS data-labels instead so we don't have nasty horizontal scrolling */}
+          <thead className="hidden md:table-header-group">
+            <tr className="bg-surface-container-low border-b border-outline-variant">
+              <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">Title</th>
+              <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">Author</th>
+              <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">ISBN</th>
+              <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">Genre</th>
+              <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">Total Copies</th>
+              <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="font-body-md text-body-md text-on-surface divide-y md:divide-outline-variant block md:table-row-group">
+            {isBooksLoading ? (
+              [...Array(5)].map((_, i) => (
+                <tr key={i} className="animate-pulse block md:table-row border-b border-outline-variant md:border-none p-sm md:p-0">
+                  <td data-label="Title" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="h-5 bg-surface-container-high w-1/2 md:w-3/4"></div>
+                  </td>
+                  <td data-label="Author" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="h-5 bg-surface-container-high w-1/3 md:w-1/2"></div>
+                  </td>
+                  <td data-label="ISBN" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="h-5 bg-surface-container-high w-2/3 md:w-full"></div>
+                  </td>
+                  <td data-label="Genre" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="h-6 bg-surface-container-high w-20"></div>
+                  </td>
+                  <td data-label="Total Copies" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="h-5 bg-surface-container-high w-1/4"></div>
+                  </td>
+                  <td data-label="Actions" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="flex justify-end space-x-sm w-full md:w-auto"><div className="h-6 w-6 bg-surface-container-high"></div><div className="h-6 w-6 bg-surface-container-high"></div></div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+              ))
+            ) : books.length > 0 ? (
+              books.map(book => (
+                <tr key={book._id} className="hover:bg-[#F2F2F2] transition-colors group block md:table-row border-b border-outline-variant md:border-none p-sm md:p-0">
+                  <td data-label="Title" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <span className="text-right md:text-left text-on-surface w-2/3 truncate md:w-auto">{book.title}</span>
+                  </td>
+                  <td data-label="Author" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <span className="text-right md:text-left text-on-surface">{book.author}</span>
+                  </td>
+                  <td data-label="ISBN" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <span className="text-right md:text-left text-on-surface">{book.isbn}</span>
+                  </td>
+                  <td data-label="Genre" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <span className="inline-flex items-center px-sm py-[2px] border border-outline-variant text-label-sm font-label-sm bg-white">
+                      {book.genre}
+                    </span>
+                  </td>
+                  <td data-label="Total Copies" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <span className="text-right md:text-left text-on-surface">{book.totalCopies}</span>
+                  </td>
+                  <td data-label="Actions" className="py-xs md:py-md px-sm md:px-md flex justify-between md:table-cell border-b border-outline-variant md:border-none last:border-b-0 before:content-[attr(data-label)] md:before:content-none before:font-bold before:text-on-surface-variant before:mr-4 items-center">
+                    <div className="flex justify-end space-x-sm w-full md:w-auto">
+                      <button onClick={() => handleEdit(book)} className="text-on-surface-variant hover:text-primary transition-colors" title="Edit">
+                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                      </button>
+                      <button onClick={() => handleDelete(book._id)} className="text-on-surface-variant hover:text-error transition-colors" title="Delete">
+                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="py-xl px-md text-center text-on-surface-variant font-body-md">
+                  No books found. Click "Add Book" to create a new record.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </main>
   );
 };
 

@@ -1,91 +1,84 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import API from '../api/axiosInstance';
+import api from '../api/axios';
+import logo from '../assets/logo.png';
 
 const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const validate = () => {
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
-      return false;
-    }
-    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    return true;
-  };
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!validate()) return;
-
-    setLoading(true);
     try {
-      const { data } = await API.post('/auth/login', formData);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('userName', data.name);
+      const res = await api.post('/auth/login', { email, password });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('userName', res.data.name || 'User');
       navigate('/books');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
+      setError(err.response?.data?.message || 'Invalid email or password.');
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <span className="auth-icon">📚</span>
-          <h1>Library IMS</h1>
-          <p>Sign in to your account</p>
-        </div>
-        <form onSubmit={handleSubmit} className="auth-form">
-          {error && <div className="error-message">{error}</div>}
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
+    <div className="bg-surface-container-lowest text-on-surface min-h-screen flex flex-col items-center justify-center p-md">
+      <main className="w-full max-w-[400px] border border-outline-variant bg-surface-container-lowest p-xl">
+        <header className="mb-xl border-b border-outline-variant pb-md text-center">
+          <img src={logo} alt="Logo" className="w-16 h-16 mx-auto mb-sm" />
+          <h1 className="font-headline-lg text-headline-lg tracking-tight text-on-surface">Library Inventory Management System</h1>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-sm">Librarian Login</p>
+        </header>
+
+        {error && (
+          <div className="border border-error bg-error-container text-on-error-container p-md mb-lg font-body-md text-body-md flex items-start gap-sm" role="alert">
+            <span className="material-symbols-outlined text-error" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="flex flex-col gap-sm mb-lg">
+            <label className="font-label-sm text-label-sm text-on-surface" htmlFor="email">Email</label>
+            <input 
+              className="border border-outline-variant h-[40px] px-md bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:border-primary focus:outline-none transition-colors" 
+              id="email" 
+              name="email" 
+              required 
               type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
+          
+          <div className="flex flex-col gap-sm mb-xl">
+            <label className="font-label-sm text-label-sm text-on-surface" htmlFor="password">Password</label>
+            <input 
+              className="border border-outline-variant h-[40px] px-md bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:border-primary focus:outline-none transition-colors" 
+              id="password" 
+              name="password" 
+              required 
               type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+
+          <button 
+            className="bg-primary text-on-primary h-[40px] font-label-sm text-label-sm flex items-center justify-center hover:bg-on-primary-fixed-variant transition-colors w-full mb-lg tracking-wider border-none cursor-pointer" 
+            type="submit"
+          >
+            Login
           </button>
+          
+          <div className="text-center mt-md border-t border-outline-variant pt-lg">
+            <Link className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" to="/register">
+              Don't have an account? Register here
+            </Link>
+          </div>
         </form>
-        <p className="auth-footer">
-          Don&apos;t have an account? <Link to="/register">Register</Link>
-        </p>
-      </div>
+      </main>
     </div>
   );
 };

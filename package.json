@@ -1,0 +1,28 @@
+{
+  "name": "library-inventory-mern",
+  "version": "1.0.0",
+  "description": "A full-stack Library Inventory Management System built with the MERN stack (MongoDB, Express.js, React.js, Node.js). This application allows librarians to manage books and members through a secure, JWT-authenticated interface.",
+  "main": "index.js",
+  "scripts": {
+    "setup": "npm install --prefix server && npm install --prefix client && npm run dev",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client -- --open\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/4nur4gmishr4/library-inventory-mern.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/4nur4gmishr4/library-inventory-mern/issues"
+  },
+  "homepage": "https://github.com/4nur4gmishr4/library-inventory-mern#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "wait-on": "^9.0.10"
+  }
+}

@@ -8,9 +8,8 @@ const generateToken = (id) => {
   });
 };
 
-// @desc    Register a new librarian
-// @route   POST /api/auth/register
-// @access  Public
+// register a new librarian account
+// make sure we validate everything cleanly before hitting the database
 const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -70,9 +69,7 @@ const register = async (req, res, next) => {
   }
 };
 
-// @desc    Login librarian & get token
-// @route   POST /api/auth/login
-// @access  Public
+// handle librarian login and return the JWT payload
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;

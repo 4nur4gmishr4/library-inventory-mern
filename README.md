@@ -34,12 +34,7 @@ git clone https://github.com/4nur4gmishr4/library-inventory-mern.git
 cd library-inventory-mern
 ```
 
-### 2. Setup Backend
-
-```bash
-cd server
-npm install
-```
+### 2. Configure Environment
 
 Create a `.env` file in the `/server` directory (use `.env.example` as a reference):
 
@@ -50,29 +45,17 @@ JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=1d
 ```
 
-Start the backend server:
+### 3. One-Command Setup & Run
+
+We have configured a root orchestration script that will automatically install all dependencies for both the frontend and backend, start both servers concurrently, and open the application in your default browser.
+
+Simply run the following command in the root folder (`library-inventory-mern`):
 
 ```bash
-npm run dev
+npm run setup
 ```
 
-The backend will start on `http://localhost:5000`.
-
-### 3. Setup Frontend
-
-Open a new terminal:
-
-```bash
-cd client
-npm install
-npm run dev
-```
-
-The frontend will start on `http://localhost:5173`.
-
-### 4. Access the Application
-
-Open your browser and navigate to `http://localhost:5173`. Register a new account, then log in to start managing books and members.
+The backend will start on `http://localhost:5000` and the frontend will automatically open to `http://localhost:5173`. Register a new account, then log in to start managing books and members.
 
 ## Environment Variables
 
@@ -130,7 +113,7 @@ library-inventory-mern/
 │   ├── package.json
 │   └── src/
 │       ├── api/
-│       │   └── axiosInstance.js
+│       │   └── axios.js
 │       ├── components/
 │       │   ├── Navbar.jsx
 │       │   └── ProtectedRoute.jsx

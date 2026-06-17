@@ -1,110 +1,118 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import API from '../api/axiosInstance';
+import api from '../api/axios';
+import logo from '../assets/logo.png';
 
 const Register = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const validate = () => {
-    if (!formData.name || !formData.email || !formData.password) {
-      setError('Please fill in all fields');
-      return false;
-    }
-    if (formData.name.length < 2 || formData.name.length > 100) {
-      setError('Name must be between 2 and 100 characters');
-      return false;
-    }
-    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-    if (!passwordRegex.test(formData.password)) {
-      setError('Password must be at least 8 characters with 1 uppercase letter, 1 number, and 1 special character');
-      return false;
-    }
-    return true;
+    if (!name || name.length < 2 || name.length > 100) return 'Name must be between 2 and 100 characters.';
+    if (!email || !/\S+@\S+\.\S+/.test(email)) return 'Please provide a valid email address.';
+    if (!password || password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least 1 uppercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least 1 number.';
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return 'Password must contain at least 1 special character.';
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-    if (!validate()) return;
-
-    setLoading(true);
     try {
-      await API.post('/auth/register', formData);
+      await api.post('/auth/register', { name, email, password });
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <div className="auth-header">
-          <span className="auth-icon">📚</span>
-          <h1>Library IMS</h1>
-          <p>Create a new account</p>
+    <div className="font-body-md text-body-md text-on-surface bg-surface flex flex-col justify-center items-center p-margin-mobile md:p-margin-desktop min-h-screen">
+      <main className="w-full max-w-md bg-surface-container-lowest border border-outline-variant">
+        <div className="px-lg py-lg border-b border-outline-variant bg-surface-container-lowest text-center">
+          <img src={logo} alt="Logo" className="w-16 h-16 mx-auto mb-sm" />
+          <h1 className="font-headline-lg text-headline-lg tracking-tight text-on-surface">Library Inventory Management System</h1>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-sm">Librarian Registration</p>
         </div>
-        <form onSubmit={handleSubmit} className="auth-form">
-          {error && <div className="error-message">{error}</div>}
-          <div className="form-group">
-            <label htmlFor="name">Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter your full name"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special"
-              required
-            />
-          </div>
-          <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-            {loading ? 'Creating account...' : 'Register'}
-          </button>
-        </form>
-        <p className="auth-footer">
-          Already have an account? <Link to="/login">Sign In</Link>
-        </p>
-      </div>
+        
+        <div className="px-lg py-xl">
+          {error && (
+            <div className="mb-lg p-sm border border-error bg-error-container text-on-error-container font-body-md text-body-md flex items-start gap-sm" id="error-message">
+              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-lg">
+            <div className="flex flex-col gap-xs">
+              <label className="font-label-sm text-label-sm text-on-surface" htmlFor="name">Name</label>
+              <input 
+                className="h-[40px] px-sm border border-outline-variant bg-surface-container-lowest focus:border-primary focus:outline-none transition-colors duration-150 font-body-md text-body-md" 
+                id="name" 
+                name="name" 
+                required 
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex flex-col gap-xs">
+              <label className="font-label-sm text-label-sm text-on-surface" htmlFor="email">Email</label>
+              <input 
+                className="h-[40px] px-sm border border-outline-variant bg-surface-container-lowest focus:border-primary focus:outline-none transition-colors duration-150 font-body-md text-body-md" 
+                id="email" 
+                name="email" 
+                required 
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex flex-col gap-xs">
+              <label className="font-label-sm text-label-sm text-on-surface" htmlFor="password">Password</label>
+              <input 
+                className="h-[40px] px-sm border border-outline-variant bg-surface-container-lowest focus:border-primary focus:outline-none transition-colors duration-150 font-body-md text-body-md" 
+                id="password" 
+                name="password" 
+                required 
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <span className="text-on-surface-variant font-label-sm text-label-sm mt-xs">
+                Minimum 8 characters, 1 uppercase, 1 number, 1 special character
+              </span>
+            </div>
+            
+            <button 
+              className="mt-sm h-[40px] w-full bg-primary text-on-primary font-label-sm text-label-sm hover:bg-on-primary-fixed-variant transition-all duration-150 flex justify-center items-center border-none cursor-pointer" 
+              type="submit"
+            >
+              Register
+            </button>
+          </form>
+        </div>
+        
+        <div className="px-lg py-md border-t border-outline-variant bg-surface-container-low flex justify-center">
+          <Link className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-150" to="/login">
+            Already have an account? Login here
+          </Link>
+        </div>
+      </main>
     </div>
   );
 };

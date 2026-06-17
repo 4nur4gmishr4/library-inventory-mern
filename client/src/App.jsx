@@ -5,12 +5,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Books from './pages/Books';
 import Members from './pages/Members';
+import { DataProvider } from './context/DataContext';
 
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <main>
+    <DataProvider>
+      <Router>
+      <div className="bg-surface text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col w-full pb-16 md:pb-0">
+        <Navbar />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -30,10 +32,11 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/books" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </main>
+      </div>
     </Router>
+    </DataProvider>
   );
 }
 

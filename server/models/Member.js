@@ -25,9 +25,14 @@ const memberSchema = new mongoose.Schema(
       ],
     },
     phone: {
-      type: String,
+      type: Number,
       required: [true, 'Phone Number is required'],
-      match: [/^\d{10}$/, 'Phone Number must be exactly 10 digits'],
+      validate: {
+        validator: function(v) {
+          return /^\d{10}$/.test(v.toString());
+        },
+        message: 'Phone Number must be exactly 10 digits'
+      }
     },
     membershipType: {
       type: String,
