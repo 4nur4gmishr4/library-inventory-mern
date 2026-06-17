@@ -27,7 +27,7 @@ app.use('/api/members', require('./routes/memberRoutes'));
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // Catch-all route to serve React's index.html for any unknown route (React Router)
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
 });
 
