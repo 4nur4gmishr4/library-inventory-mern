@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
@@ -21,9 +22,13 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/books', require('./routes/bookRoutes'));
 app.use('/api/members', require('./routes/memberRoutes'));
 
-// Health check
-app.get('/', (req, res) => {
-  res.json({ message: 'Library Inventory API is running' });
+// --- Production Deployment ---
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Catch-all route to serve React's index.html for any unknown route (React Router)
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
 });
 
 // Centralized error handling middleware
