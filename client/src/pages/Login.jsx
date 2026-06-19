@@ -89,7 +89,7 @@ const Login = () => {
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting && <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>}
+            {isSubmitting && <span className="inline-block w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>}
             Login
           </button>
           
