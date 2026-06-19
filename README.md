@@ -1,8 +1,8 @@
-# Library Inventory Management System
+# Project title and description
 
-## Project description and features
+Library Inventory Management System - A full-stack Library Inventory Management System built with the MERN stack (MongoDB, Express.js, React.js, Node.js). This application allows librarians to manage books and members through a secure, JWT-authenticated interface.
 
-A full-stack Library Inventory Management System built with the MERN stack (MongoDB, Express.js, React.js, Node.js). This application allows librarians to manage books and members through a secure, JWT-authenticated interface.
+## Features list
 
 - **Authentication:** Librarian registration and login with JWT-based authentication
 - **Book Management:** Full CRUD for books — add, view, edit, and delete with fields for Title, Author, ISBN, Genre, and Total Copies
@@ -58,16 +58,16 @@ npm run setup
 
 The backend will start on `http://localhost:5000` and the frontend will automatically open at `http://localhost:5173`. Register a new account, then log in to start managing books and members.
 
-## Environment Variables
+## Environment variables required
 
-| Variable | Description | Example |
+| Variable | Description | Sample Value |
 |---|---|---|
 | PORT | Server port | 5000 |
 | MONGO_URI | MongoDB connection string | mongodb+srv://\<user\>:\<password\>@cluster.mongodb.net/library |
 | JWT_SECRET | Secret key for JWT signing | your_secret_key_here |
 | JWT_EXPIRES_IN | JWT token expiry duration | 7d |
 
-## API Endpoints documentation
+## API documentation
 
 ### Authentication
 
