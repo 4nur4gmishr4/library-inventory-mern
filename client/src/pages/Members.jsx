@@ -215,7 +215,7 @@ const Members = () => {
                 disabled={isSubmitting}
                 className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px] flex items-center gap-sm disabled:opacity-60"
               >
-                {isSubmitting && <span className="inline-block w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" aria-hidden="true"></span>}
+                {isSubmitting && <span className="inline-block w-4 h-4 border-2 border-on-primary border-t-transparent animate-spin" style={{ borderRadius: '50%' }} aria-hidden="true"></span>}
                 {editId ? 'Update Member' : 'Save Member'}
               </button>
             </div>
