@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { DataContext } from '../context/DataContext';
 import api from '../api/axios';
 
@@ -14,27 +14,34 @@ const Books = () => {
     totalCopies: ''
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (!booksFetched) {
-      fetchBooks();
-    } else {
-      fetchBooks(true);
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      if (!booksFetched) {
+        fetchBooks();
+      } else {
+        fetchBooks(true);
+      }
     }
   }, [fetchBooks, booksFetched]);
 
-  // Quick regex checks before we bother hitting the API
+  // Client-side validation mirroring server rules
   const validate = () => {
-    if (!formData.title || formData.title.length < 2 || formData.title.length > 100) return 'Title must be 2-100 characters.';
-    if (!formData.author || formData.author.length < 2 || formData.author.length > 100) return 'Author must be 2-100 characters.';
+    if (!formData.title || formData.title.length < 2 || formData.title.length > 100) return 'Title must be between 2 and 100 characters.';
+    if (!formData.author || formData.author.length < 2 || formData.author.length > 100) return 'Author must be between 2 and 100 characters.';
     if (!/^\d{13}$/.test(formData.isbn)) return 'ISBN must be exactly 13 digits.';
-    if (!formData.totalCopies || parseInt(formData.totalCopies, 10) < 1) return 'Total copies must be at least 1.';
+    if (!formData.totalCopies || !Number.isInteger(Number(formData.totalCopies)) || Number(formData.totalCopies) < 1) return 'Total copies must be a whole number of at least 1.';
     return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     const validationError = validate();
     if (validationError) {
@@ -42,11 +49,14 @@ const Books = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       if (editId) {
         await api.put(`/books/${editId}`, formData);
+        setSuccess('Book updated successfully.');
       } else {
         await api.post('/books', formData);
+        setSuccess('Book added successfully.');
       }
       setShowForm(false);
       setEditId(null);
@@ -54,6 +64,8 @@ const Books = () => {
       fetchBooks(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save book.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -68,15 +80,19 @@ const Books = () => {
     });
     setShowForm(true);
     setError('');
+    setSuccess('');
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this book?')) {
       try {
         await api.delete(`/books/${id}`);
+        setSuccess('Book deleted successfully.');
+        setError('');
         fetchBooks(true);
       } catch (err) {
-        console.error(err);
+        setError(err.response?.data?.message || 'Failed to delete book.');
+        setSuccess('');
       }
     }
   };
@@ -101,6 +117,7 @@ const Books = () => {
             setEditId(null);
             setFormData({ title: '', author: '', isbn: '', genre: 'Fiction', totalCopies: '' });
             setError('');
+            setSuccess('');
           }}
           className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px] flex items-center mt-sm md:mt-0"
         >
@@ -108,6 +125,13 @@ const Books = () => {
           Add Book
         </button>
       </div>
+
+      {success && (
+        <div className="mb-md p-sm border border-primary bg-secondary-fixed-dim text-on-surface font-body-md text-body-md flex items-start gap-sm" style={{ backgroundColor: '#dae2ff' }}>
+          <span className="material-symbols-outlined text-[18px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+          {success}
+        </div>
+      )}
 
       {showForm && (
         <div className="border border-outline-variant bg-surface-container-lowest p-lg mb-xl">
@@ -130,6 +154,8 @@ const Books = () => {
                 id="title" 
                 required 
                 type="text"
+                minLength={2}
+                maxLength={100}
                 value={formData.title}
                 onChange={e => setFormData({...formData, title: e.target.value})}
               />
@@ -142,6 +168,8 @@ const Books = () => {
                 id="author" 
                 required 
                 type="text"
+                minLength={2}
+                maxLength={100}
                 value={formData.author}
                 onChange={e => setFormData({...formData, author: e.target.value})}
               />
@@ -154,6 +182,8 @@ const Books = () => {
                 id="isbn" 
                 required 
                 type="text"
+                pattern="\d{13}"
+                title="ISBN must be exactly 13 digits"
                 value={formData.isbn}
                 onChange={e => setFormData({...formData, isbn: e.target.value})}
               />
@@ -193,14 +223,17 @@ const Books = () => {
               <button 
                 type="button"
                 onClick={handleCancel}
+                disabled={isSubmitting}
                 className="bg-surface-container-lowest text-on-surface border border-outline-variant px-lg py-sm font-label-sm text-label-sm hover:bg-surface-container-low transition-colors h-[40px]"
               >
                 Cancel
               </button>
               <button 
                 type="submit"
-                className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px]"
+                disabled={isSubmitting}
+                className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px] flex items-center gap-sm disabled:opacity-60"
               >
+                {isSubmitting && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
                 {editId ? 'Update Book' : 'Save Book'}
               </button>
             </div>
@@ -210,7 +243,6 @@ const Books = () => {
 
       <div className="border border-outline-variant bg-surface-container-lowest">
         <table className="w-full text-left border-collapse">
-          {/* Hide the standard thead on mobile and use CSS data-labels instead so we don't have nasty horizontal scrolling */}
           <thead className="hidden md:table-header-group">
             <tr className="bg-surface-container-low border-b border-outline-variant">
               <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">Title</th>
@@ -280,7 +312,7 @@ const Books = () => {
             ) : (
               <tr>
                 <td colSpan="6" className="py-xl px-md text-center text-on-surface-variant font-body-md">
-                  No books found. Click "Add Book" to create a new record.
+                  No books found. Click &quot;Add Book&quot; to create a new record.
                 </td>
               </tr>
             )}

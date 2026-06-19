@@ -1,6 +1,6 @@
 const Member = require('../models/Member');
 
-// fetch all active library members, newest first
+// Fetch all active library members, newest first
 const getMembers = async (req, res, next) => {
   try {
     const members = await Member.find().sort({ createdAt: -1 });
@@ -10,19 +10,19 @@ const getMembers = async (req, res, next) => {
   }
 };
 
-// register a new member and do strict validations on phone/email
+// Register a new member with strict validations on phone/email
 const createMember = async (req, res, next) => {
   try {
     const { fullName, email, phone, membershipType } = req.body;
 
     // Validate required fields
-    if (!fullName || !email || !phone || !membershipType) {
+    if (!fullName || !email || phone === undefined || phone === null || phone === '' || !membershipType) {
       res.status(400);
       throw new Error('Please provide all required fields: fullName, email, phone, membershipType');
     }
 
     // Validate fullName
-    if (fullName.length < 2 || fullName.length > 100) {
+    if (typeof fullName !== 'string' || fullName.length < 2 || fullName.length > 100) {
       res.status(400);
       throw new Error('Full Name must be between 2 and 100 characters');
     }
@@ -41,8 +41,9 @@ const createMember = async (req, res, next) => {
       throw new Error('A member with this email already exists');
     }
 
-    // Validate phone (exactly 10 digits)
-    if (!/^\d{10}$/.test(phone.toString())) {
+    // Validate phone (exactly 10 digits, numeric only)
+    const phoneNum = Number(phone);
+    if (!Number.isInteger(phoneNum) || phoneNum < 1000000000 || phoneNum > 9999999999) {
       res.status(400);
       throw new Error('Phone Number must be exactly 10 digits');
     }
@@ -54,7 +55,7 @@ const createMember = async (req, res, next) => {
       throw new Error('Membership Type must be one of: Student, Faculty, Public');
     }
 
-    const member = await Member.create({ fullName, email, phone, membershipType });
+    const member = await Member.create({ fullName, email, phone: phoneNum, membershipType });
 
     res.status(201).json(member);
   } catch (error) {
@@ -62,7 +63,7 @@ const createMember = async (req, res, next) => {
   }
 };
 
-// update an existing member's info
+// Update an existing member's info
 const updateMember = async (req, res, next) => {
   try {
     const member = await Member.findById(req.params.id);
@@ -75,9 +76,11 @@ const updateMember = async (req, res, next) => {
     const { fullName, email, phone, membershipType } = req.body;
 
     // Validate fullName if provided
-    if (fullName !== undefined && (fullName.length < 2 || fullName.length > 100)) {
-      res.status(400);
-      throw new Error('Full Name must be between 2 and 100 characters');
+    if (fullName !== undefined) {
+      if (typeof fullName !== 'string' || fullName.length < 2 || fullName.length > 100) {
+        res.status(400);
+        throw new Error('Full Name must be between 2 and 100 characters');
+      }
     }
 
     // Validate email if provided
@@ -98,10 +101,14 @@ const updateMember = async (req, res, next) => {
       }
     }
 
-    // Validate phone if provided
-    if (phone !== undefined && !/^\d{10}$/.test(phone.toString())) {
-      res.status(400);
-      throw new Error('Phone Number must be exactly 10 digits');
+    // Validate phone if provided (exactly 10 digits, numeric only)
+    let phoneNum;
+    if (phone !== undefined) {
+      phoneNum = Number(phone);
+      if (!Number.isInteger(phoneNum) || phoneNum < 1000000000 || phoneNum > 9999999999) {
+        res.status(400);
+        throw new Error('Phone Number must be exactly 10 digits');
+      }
     }
 
     // Validate membershipType if provided
@@ -115,7 +122,12 @@ const updateMember = async (req, res, next) => {
 
     const updatedMember = await Member.findByIdAndUpdate(
       req.params.id,
-      { fullName, email, phone, membershipType },
+      {
+        fullName,
+        email,
+        phone: phoneNum !== undefined ? phoneNum : undefined,
+        membershipType,
+      },
       { new: true, runValidators: true }
     );
 
@@ -125,8 +137,7 @@ const updateMember = async (req, res, next) => {
   }
 };
 
-// completely delete a member record from the db
-// note: might want to check if they have active book loans before doing this in v2
+// Delete a member record from the DB
 const deleteMember = async (req, res, next) => {
   try {
     const member = await Member.findById(req.params.id);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { DataContext } from '../context/DataContext';
 import api from '../api/axios';
 
@@ -13,26 +13,35 @@ const Members = () => {
     membershipType: 'Student'
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (!membersFetched) {
-      fetchMembers();
-    } else {
-      fetchMembers(true);
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      if (!membersFetched) {
+        fetchMembers();
+      } else {
+        fetchMembers(true);
+      }
     }
   }, [fetchMembers, membersFetched]);
 
-  // Quick regex checks before we bother hitting the API
+  // Client-side validation mirroring server rules exactly
   const validate = () => {
     if (!formData.fullName || formData.fullName.length < 2 || formData.fullName.length > 100) return 'Full Name must be between 2 and 100 characters.';
-    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) return 'Please provide a valid email address.';
-    if (!/^\d{10}$/.test(formData.phone)) return 'Phone Number must be exactly 10 digits.';
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!formData.email || !emailRegex.test(formData.email)) return 'Please provide a valid email address.';
+    const phoneNum = Number(formData.phone);
+    if (!Number.isInteger(phoneNum) || phoneNum < 1000000000 || phoneNum > 9999999999) return 'Phone Number must be exactly 10 digits.';
     return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     const validationError = validate();
     if (validationError) {
@@ -40,11 +49,14 @@ const Members = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       if (editId) {
         await api.put(`/members/${editId}`, formData);
+        setSuccess('Member updated successfully.');
       } else {
         await api.post('/members', formData);
+        setSuccess('Member added successfully.');
       }
       setShowForm(false);
       setEditId(null);
@@ -52,6 +64,8 @@ const Members = () => {
       fetchMembers(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save member.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -60,20 +74,24 @@ const Members = () => {
     setFormData({
       fullName: member.fullName,
       email: member.email,
-      phone: member.phone,
+      phone: member.phone || '',
       membershipType: member.membershipType
     });
     setShowForm(true);
     setError('');
+    setSuccess('');
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this member?')) {
       try {
         await api.delete(`/members/${id}`);
+        setSuccess('Member deleted successfully.');
+        setError('');
         fetchMembers(true);
       } catch (err) {
-        console.error(err);
+        setError(err.response?.data?.message || 'Failed to delete member.');
+        setSuccess('');
       }
     }
   };
@@ -98,6 +116,7 @@ const Members = () => {
             setEditId(null);
             setFormData({ fullName: '', email: '', phone: '', membershipType: 'Student' });
             setError('');
+            setSuccess('');
           }}
           className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px] flex items-center"
         >
@@ -105,6 +124,13 @@ const Members = () => {
           Add Member
         </button>
       </div>
+
+      {success && (
+        <div className="mb-md p-sm border border-primary text-on-surface font-body-md text-body-md flex items-start gap-sm" style={{ backgroundColor: '#dae2ff' }}>
+          <span className="material-symbols-outlined text-[18px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+          {success}
+        </div>
+      )}
 
       {showForm && (
         <div className="border border-outline-variant bg-surface-container-lowest p-lg mb-xl">
@@ -127,6 +153,8 @@ const Members = () => {
                 id="fullName" 
                 required 
                 type="text"
+                minLength={2}
+                maxLength={100}
                 value={formData.fullName}
                 onChange={e => setFormData({...formData, fullName: e.target.value})}
               />
@@ -150,7 +178,10 @@ const Members = () => {
                 className="h-[40px] border border-outline-variant bg-surface-container-lowest px-sm focus:border-primary focus:outline-none font-body-md text-body-md text-on-surface" 
                 id="phone" 
                 required 
-                type="tel"
+                type="number"
+                min="1000000000"
+                max="9999999999"
+                title="Phone number must be exactly 10 digits"
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
               />
@@ -174,14 +205,17 @@ const Members = () => {
               <button 
                 type="button" 
                 onClick={handleCancel}
+                disabled={isSubmitting}
                 className="bg-surface-container-lowest text-on-surface border border-outline-variant px-lg py-sm font-label-sm text-label-sm hover:bg-surface-container-low transition-colors h-[40px]"
               >
                 Cancel
               </button>
               <button 
-                type="submit" 
-                className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px]"
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-primary-container text-on-primary border-none px-lg py-sm font-label-sm text-label-sm hover:bg-[#00327d] transition-colors h-[40px] flex items-center gap-sm disabled:opacity-60"
               >
+                {isSubmitting && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
                 {editId ? 'Update Member' : 'Save Member'}
               </button>
             </div>
@@ -191,7 +225,6 @@ const Members = () => {
 
       <div className="border border-outline-variant bg-surface-container-lowest">
         <table className="w-full text-left border-collapse">
-          {/* Hide the standard thead on mobile and use CSS data-labels instead so we don't have nasty horizontal scrolling */}
           <thead className="hidden md:table-header-group">
             <tr className="bg-surface-container-low border-b border-outline-variant">
               <th className="font-label-sm text-label-sm text-on-surface-variant py-md px-md whitespace-nowrap">Full Name</th>
@@ -254,7 +287,7 @@ const Members = () => {
             ) : (
               <tr>
                 <td colSpan="5" className="py-xl px-md text-center text-on-surface-variant font-body-md">
-                  No members found. Click "Add Member" to create a new record.
+                  No members found. Click &quot;Add Member&quot; to create a new record.
                 </td>
               </tr>
             )}

@@ -11,6 +11,7 @@ const memberSchema = new mongoose.Schema(
     },
     memberId: {
       type: Number,
+      required: [true, 'Member ID is required'],
       unique: true,
     },
     email: {
@@ -28,11 +29,11 @@ const memberSchema = new mongoose.Schema(
       type: Number,
       required: [true, 'Phone Number is required'],
       validate: {
-        validator: function(v) {
-          return /^\d{10}$/.test(v.toString());
+        validator: function (v) {
+          return Number.isInteger(v) && v >= 1000000000 && v <= 9999999999;
         },
-        message: 'Phone Number must be exactly 10 digits'
-      }
+        message: 'Phone Number must be exactly 10 digits',
+      },
     },
     membershipType: {
       type: String,
@@ -46,8 +47,8 @@ const memberSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-generate memberId before saving
-memberSchema.pre('save', async function () {
+// Auto-generate memberId before validation so the required constraint is satisfied
+memberSchema.pre('validate', async function () {
   if (!this.memberId) {
     const lastMember = await mongoose.model('Member').findOne().sort({ memberId: -1 });
     this.memberId = lastMember ? lastMember.memberId + 1 : 1001;

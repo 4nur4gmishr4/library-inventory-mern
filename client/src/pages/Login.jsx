@@ -8,10 +8,27 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Client-side validation mirroring server rules
+  const validate = () => {
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!email || !emailRegex.test(email)) return 'Please provide a valid email address.';
+    if (!password) return 'Please provide a password.';
+    return null;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
@@ -19,6 +36,8 @@ const Login = () => {
       navigate('/books');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -66,15 +85,17 @@ const Login = () => {
           </div>
 
           <button 
-            className="bg-primary text-on-primary h-[40px] font-label-sm text-label-sm flex items-center justify-center hover:bg-on-primary-fixed-variant transition-colors w-full mb-lg tracking-wider border-none cursor-pointer" 
+            className="bg-primary text-on-primary h-[40px] font-label-sm text-label-sm flex items-center justify-center hover:bg-on-primary-fixed-variant transition-colors w-full mb-lg tracking-wider border-none cursor-pointer gap-sm disabled:opacity-60" 
             type="submit"
+            disabled={isSubmitting}
           >
+            {isSubmitting && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
             Login
           </button>
           
           <div className="text-center mt-md border-t border-outline-variant pt-lg">
             <Link className="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" to="/register">
-              Don't have an account? Register here
+              Don&apos;t have an account? Register here
             </Link>
           </div>
         </form>

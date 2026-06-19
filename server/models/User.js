@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
         'Please provide a valid email address',
       ],
     },
-    password: {
+    passwordHash: {
       type: String,
       required: [true, 'Password is required'],
       minlength: [8, 'Password must be at least 8 characters'],
@@ -37,16 +37,17 @@ const userSchema = new mongoose.Schema(
 
 // Hash password before saving
 userSchema.pre('save', async function () {
-  if (!this.isModified('password')) {
+  if (!this.isModified('passwordHash')) {
     return;
   }
   const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
 });
 
 // Compare entered password with hashed password
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  if (!this.passwordHash) return false;
+  return await bcrypt.compare(enteredPassword, this.passwordHash);
 };
 
 module.exports = mongoose.model('User', userSchema);

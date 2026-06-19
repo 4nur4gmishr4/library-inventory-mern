@@ -9,14 +9,16 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validate = () => {
     if (!name || name.length < 2 || name.length > 100) return 'Name must be between 2 and 100 characters.';
-    if (!email || !/\S+@\S+\.\S+/.test(email)) return 'Please provide a valid email address.';
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!email || !emailRegex.test(email)) return 'Please provide a valid email address.';
     if (!password || password.length < 8) return 'Password must be at least 8 characters.';
     if (!/[A-Z]/.test(password)) return 'Password must contain at least 1 uppercase letter.';
     if (!/[0-9]/.test(password)) return 'Password must contain at least 1 number.';
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) return 'Password must contain at least 1 special character.';
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) return 'Password must contain at least 1 special character.';
     return null;
   };
 
@@ -30,11 +32,14 @@ const Register = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await api.post('/auth/register', { name, email, password });
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -64,6 +69,8 @@ const Register = () => {
                 name="name" 
                 required 
                 type="text"
+                minLength={2}
+                maxLength={100}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -90,6 +97,7 @@ const Register = () => {
                 name="password" 
                 required 
                 type="password"
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -99,9 +107,11 @@ const Register = () => {
             </div>
             
             <button 
-              className="mt-sm h-[40px] w-full bg-primary text-on-primary font-label-sm text-label-sm hover:bg-on-primary-fixed-variant transition-all duration-150 flex justify-center items-center border-none cursor-pointer" 
+              className="mt-sm h-[40px] w-full bg-primary text-on-primary font-label-sm text-label-sm hover:bg-on-primary-fixed-variant transition-all duration-150 flex justify-center items-center border-none cursor-pointer gap-sm disabled:opacity-60" 
               type="submit"
+              disabled={isSubmitting}
             >
+              {isSubmitting && <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>}
               Register
             </button>
           </form>

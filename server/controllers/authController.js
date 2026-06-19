@@ -4,12 +4,11 @@ const User = require('../models/User');
 // Generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
 
-// register a new librarian account
-// make sure we validate everything cleanly before hitting the database
+// Register a new librarian account
 const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -49,8 +48,8 @@ const register = async (req, res, next) => {
       throw new Error('A user with this email already exists');
     }
 
-    // Create user (password is hashed via pre-save hook)
-    const user = await User.create({ name, email, password });
+    // Create user (passwordHash is hashed via pre-save hook)
+    const user = await User.create({ name, email, passwordHash: password });
 
     if (user) {
       res.status(201).json({
@@ -69,7 +68,7 @@ const register = async (req, res, next) => {
   }
 };
 
-// handle librarian login and return the JWT payload
+// Handle librarian login and return the JWT payload
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;

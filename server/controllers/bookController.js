@@ -1,6 +1,6 @@
 const Book = require('../models/Book');
 
-// grab all books, sorted newest first
+// Grab all books, sorted newest first
 const getBooks = async (req, res, next) => {
   try {
     const books = await Book.find().sort({ createdAt: -1 });
@@ -10,32 +10,31 @@ const getBooks = async (req, res, next) => {
   }
 };
 
-// add a new book to the inventory
-// todo: maybe add a barcode scanner integration later?
+// Add a new book to the inventory
 const createBook = async (req, res, next) => {
   try {
     const { title, author, isbn, genre, totalCopies } = req.body;
 
     // Validate required fields
-    if (!title || !author || !isbn || !genre || totalCopies === undefined) {
+    if (!title || !author || !isbn || !genre || totalCopies === undefined || totalCopies === null || totalCopies === '') {
       res.status(400);
       throw new Error('Please provide all required fields: title, author, isbn, genre, totalCopies');
     }
 
     // Validate title
-    if (title.length < 2 || title.length > 100) {
+    if (typeof title !== 'string' || title.length < 2 || title.length > 100) {
       res.status(400);
       throw new Error('Title must be between 2 and 100 characters');
     }
 
     // Validate author
-    if (author.length < 2 || author.length > 100) {
+    if (typeof author !== 'string' || author.length < 2 || author.length > 100) {
       res.status(400);
       throw new Error('Author must be between 2 and 100 characters');
     }
 
-    // Validate ISBN (exactly 13 digits)
-    if (!/^\d{13}$/.test(isbn)) {
+    // Validate ISBN (exactly 13 digits, numeric only)
+    if (typeof isbn !== 'string' || !/^\d{13}$/.test(isbn)) {
       res.status(400);
       throw new Error('ISBN must be exactly 13 digits');
     }
@@ -74,7 +73,7 @@ const createBook = async (req, res, next) => {
   }
 };
 
-// update existing book record by its mongo ID
+// Update existing book record by its mongo ID
 const updateBook = async (req, res, next) => {
   try {
     const book = await Book.findById(req.params.id);
@@ -87,21 +86,27 @@ const updateBook = async (req, res, next) => {
     const { title, author, isbn, genre, totalCopies } = req.body;
 
     // Validate title if provided
-    if (title !== undefined && (title.length < 2 || title.length > 100)) {
-      res.status(400);
-      throw new Error('Title must be between 2 and 100 characters');
+    if (title !== undefined) {
+      if (typeof title !== 'string' || title.length < 2 || title.length > 100) {
+        res.status(400);
+        throw new Error('Title must be between 2 and 100 characters');
+      }
     }
 
     // Validate author if provided
-    if (author !== undefined && (author.length < 2 || author.length > 100)) {
-      res.status(400);
-      throw new Error('Author must be between 2 and 100 characters');
+    if (author !== undefined) {
+      if (typeof author !== 'string' || author.length < 2 || author.length > 100) {
+        res.status(400);
+        throw new Error('Author must be between 2 and 100 characters');
+      }
     }
 
-    // Validate ISBN if provided
-    if (isbn !== undefined && !/^\d{13}$/.test(isbn)) {
-      res.status(400);
-      throw new Error('ISBN must be exactly 13 digits');
+    // Validate ISBN if provided (exactly 13 digits, numeric only)
+    if (isbn !== undefined) {
+      if (typeof isbn !== 'string' || !/^\d{13}$/.test(isbn)) {
+        res.status(400);
+        throw new Error('ISBN must be exactly 13 digits');
+      }
     }
 
     // Check ISBN uniqueness if changed
@@ -142,7 +147,7 @@ const updateBook = async (req, res, next) => {
   }
 };
 
-// trash a book from the db
+// Delete a book from the db
 const deleteBook = async (req, res, next) => {
   try {
     const book = await Book.findById(req.params.id);
