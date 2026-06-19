@@ -4,7 +4,7 @@
   "description": "A full-stack Library Inventory Management System built with the MERN stack (MongoDB, Express.js, React.js, Node.js). This application allows librarians to manage books and members through a secure, JWT-authenticated interface.",
   "main": "index.js",
   "scripts": {
-    "setup": "npm install --prefix server && npm install --prefix client && npm run dev",
+    "setup": "npm install && npm install --prefix server && npm install --prefix client && npm run dev",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client -- --open\"",
     "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
     "start": "node server/server.js",
